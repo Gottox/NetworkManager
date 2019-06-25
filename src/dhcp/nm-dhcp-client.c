@@ -60,6 +60,7 @@ NM_GOBJECT_PROPERTIES_DEFINE (NMDhcpClient,
 	PROP_TIMEOUT,
 	PROP_UUID,
 	PROP_HOSTNAME,
+	PROP_FQDN_FLAGS,
 );
 
 typedef struct _NMDhcpClientPrivate {
@@ -79,6 +80,7 @@ typedef struct _NMDhcpClientPrivate {
 	guint32      route_metric;
 	guint32      timeout;
 	NMDhcpState  state;
+	NMDhcpFqdnFlags fqdn_flags;
 	bool         info_only:1;
 	bool         use_fqdn:1;
 } NMDhcpClientPrivate;
@@ -277,6 +279,14 @@ nm_dhcp_client_get_hostname (NMDhcpClient *self)
 	g_return_val_if_fail (NM_IS_DHCP_CLIENT (self), NULL);
 
 	return NM_DHCP_CLIENT_GET_PRIVATE (self)->hostname;
+}
+
+NMDhcpFqdnFlags
+nm_dhcp_client_get_fqdn_flags (NMDhcpClient *self)
+{
+	g_return_val_if_fail (NM_IS_DHCP_CLIENT (self), NM_DHCP_FQDN_FLAG_DEFAULT);
+
+	return NM_DHCP_CLIENT_GET_PRIVATE (self)->fqdn_flags;
 }
 
 gboolean
@@ -935,6 +945,9 @@ get_property (GObject *object, guint prop_id,
 	case PROP_HOSTNAME:
 		g_value_set_string (value, priv->hostname);
 		break;
+	case PROP_FQDN_FLAGS:
+		g_value_set_uint (value, priv->fqdn_flags);
+		break;
 	case PROP_ROUTE_METRIC:
 		g_value_set_uint (value, priv->route_metric);
 		break;
@@ -1004,6 +1017,10 @@ set_property (GObject *object, guint prop_id,
 	case PROP_HOSTNAME:
 		/* construct-only */
 		priv->hostname = g_value_dup_string (value);
+		break;
+	case PROP_FQDN_FLAGS:
+		/* construct-only */
+		priv->fqdn_flags = g_value_get_uint (value);
 		break;
 	case PROP_ROUTE_TABLE:
 		priv->route_table = g_value_get_uint (value);
@@ -1125,6 +1142,12 @@ nm_dhcp_client_class_init (NMDhcpClientClass *client_class)
 	                         NULL,
 	                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY |
 	                         G_PARAM_STATIC_STRINGS);
+
+	obj_properties[PROP_FQDN_FLAGS] =
+	    g_param_spec_uint (NM_DHCP_CLIENT_FQDN_FLAGS, "", "",
+	                       0, G_MAXUINT32, NM_DHCP_FQDN_FLAG_DEFAULT,
+	                       G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY |
+	                       G_PARAM_STATIC_STRINGS);
 
 	obj_properties[PROP_ROUTE_TABLE] =
 	    g_param_spec_uint (NM_DHCP_CLIENT_ROUTE_TABLE, "", "",

@@ -43,6 +43,7 @@ test_config (const char *orig,
              const char *hostname,
              guint32 timeout,
              gboolean use_fqdn,
+             NMDhcpFqdnFlags fqdn_flags,
              const char *dhcp_client_id,
              GBytes *expected_new_client_id,
              const char *iface,
@@ -64,6 +65,7 @@ test_config (const char *orig,
 	                                      hostname,
 	                                      timeout,
 	                                      use_fqdn,
+	                                      fqdn_flags,
 	                                      "/path/to/dhclient.conf",
 	                                      orig,
 	                                      &new_client_id);
@@ -108,7 +110,7 @@ static const char *orig_missing_expected = \
 static void
 test_orig_missing (void)
 {
-	test_config (NULL, orig_missing_expected, AF_INET, NULL, 0, FALSE, NULL, NULL, "eth0", NULL);
+	test_config (NULL, orig_missing_expected, AF_INET, NULL, 0, FALSE, NM_DHCP_FQDN_FLAG_NONE, NULL, NULL, "eth0", NULL);
 }
 
 /*****************************************************************************/
@@ -139,6 +141,7 @@ test_override_client_id (void)
 {
 	test_config (override_client_id_orig, override_client_id_expected,
 	             AF_INET, NULL, 0, FALSE,
+	             NM_DHCP_FQDN_FLAG_NONE,
 	             "11:22:33:44:55:66",
 	             NULL,
 	             "eth0",
@@ -169,6 +172,7 @@ test_quote_client_id (void)
 {
 	test_config (NULL, quote_client_id_expected,
 	             AF_INET, NULL, 0, FALSE,
+	             NM_DHCP_FQDN_FLAG_NONE,
 	             "abcd",
 	             NULL,
 	             "eth0",
@@ -199,6 +203,7 @@ test_quote_client_id_2 (void)
 {
 	test_config (NULL, quote_client_id_expected_2,
 	             AF_INET, NULL, 0, FALSE,
+	             NM_DHCP_FQDN_FLAG_NONE,
 	             "a\\bc",
 	             NULL,
 	             "eth0",
@@ -229,6 +234,7 @@ test_hex_zero_client_id (void)
 {
 	test_config (NULL, hex_zero_client_id_expected,
 	             AF_INET, NULL, 0, FALSE,
+	             NM_DHCP_FQDN_FLAG_NONE,
 	             "00:11:22:33",
 	             NULL,
 	             "eth0",
@@ -259,6 +265,7 @@ test_ascii_client_id (void)
 {
 	test_config (NULL, ascii_client_id_expected,
 	             AF_INET, NULL, 0, FALSE,
+	             NM_DHCP_FQDN_FLAG_NONE,
 	             "qb:cd:ef:12:34:56",
 	             NULL,
 	             "eth0",
@@ -289,6 +296,7 @@ test_hex_single_client_id (void)
 {
 	test_config (NULL, hex_single_client_id_expected,
 	             AF_INET, NULL, 0, FALSE,
+	             NM_DHCP_FQDN_FLAG_NONE,
 	             "ab:cd:e:12:34:56",
 	             NULL,
 	             "eth0",
@@ -327,6 +335,7 @@ test_existing_hex_client_id (void)
 	new_client_id = g_bytes_new (bytes, sizeof (bytes));
 	test_config (existing_hex_client_id_orig, existing_hex_client_id_expected,
 	             AF_INET, NULL, 0, FALSE,
+	             NM_DHCP_FQDN_FLAG_NONE,
 	             NULL,
 	             new_client_id,
 	             "eth0",
@@ -364,6 +373,7 @@ test_existing_escaped_client_id (void)
 	new_client_id = g_bytes_new ("$test\xfe", 6);
 	test_config (existing_escaped_client_id_orig, existing_escaped_client_id_expected,
 	             AF_INET, NULL, 0, FALSE,
+	             NM_DHCP_FQDN_FLAG_NONE,
 	             NULL,
 	             new_client_id,
 	             "eth0",
@@ -405,6 +415,7 @@ test_existing_ascii_client_id (void)
 	new_client_id = g_bytes_new (buf, sizeof (buf));
 	test_config (existing_ascii_client_id_orig, existing_ascii_client_id_expected,
 	             AF_INET, NULL, 0, FALSE,
+	             NM_DHCP_FQDN_FLAG_NONE,
 	             NULL,
 	             new_client_id,
 	             "eth0",
@@ -417,7 +428,7 @@ static const char *fqdn_expected = \
 	"\n"
 	"send fqdn.fqdn \"foo.bar.com\"; # added by NetworkManager\n"
 	"send fqdn.encoded on;\n"
-	"send fqdn.server-update on;\n"
+	"send fqdn.no-client-update on;\n"
 	"\n"
 	"option rfc3442-classless-static-routes code 121 = array of unsigned integer 8;\n"
 	"option ms-classless-static-routes code 249 = array of unsigned integer 8;\n"
@@ -435,7 +446,9 @@ test_fqdn (void)
 {
 	test_config (NULL, fqdn_expected,
 	             AF_INET, "foo.bar.com", 0,
-	             TRUE, NULL,
+	             TRUE,
+	             NM_DHCP_FQDN_FLAG_ENCODED | NM_DHCP_FQDN_FLAG_NO_UPDATE,
+	             NULL,
 	             NULL,
 	             "eth0",
 	             NULL);
@@ -452,7 +465,6 @@ static const char *fqdn_options_override_expected = \
 	"# Merged from /path/to/dhclient.conf\n"
 	"\n"
 	"send fqdn.fqdn \"example2.com\"; # added by NetworkManager\n"
-	"send fqdn.encoded on;\n"
 	"send fqdn.server-update on;\n"
 	"\n"
 	"option rfc3442-classless-static-routes code 121 = array of unsigned integer 8;\n"
@@ -476,6 +488,7 @@ test_fqdn_options_override (void)
 	test_config (fqdn_options_override_orig,
 	             fqdn_options_override_expected,
 	             AF_INET, "example2.com", 0,
+	             NM_DHCP_FQDN_FLAG_SERVER_UPDATE,
 	             TRUE, NULL,
 	             NULL,
 	             "eth0",
@@ -510,6 +523,7 @@ test_override_hostname (void)
 {
 	test_config (override_hostname_orig, override_hostname_expected,
 	             AF_INET, "blahblah", 0, FALSE,
+	             NM_DHCP_FQDN_FLAG_NONE,
 	             NULL,
 	             NULL,
 	             "eth0",
@@ -538,6 +552,7 @@ test_override_hostname6 (void)
 {
 	test_config (override_hostname6_orig, override_hostname6_expected,
 	             AF_INET6, "blahblah.local", 0, TRUE,
+	             NM_DHCP_FQDN_FLAG_SERVER_UPDATE,
 	             NULL,
 	             NULL,
 	             "eth0",
@@ -550,7 +565,7 @@ static const char *nonfqdn_hostname6_expected = \
 	"# Created by NetworkManager\n"
 	"\n"
 	"send fqdn.fqdn \"blahblah\"; # added by NetworkManager\n"
-	"send fqdn.server-update on;\n"
+	"send fqdn.no-client-update on;\n"
 	"\n"
 	"also request dhcp6.name-servers;\n"
 	"also request dhcp6.domain-search;\n"
@@ -563,6 +578,7 @@ test_nonfqdn_hostname6 (void)
 	/* Non-FQDN hostname can now be used with dhclient */
 	test_config (NULL, nonfqdn_hostname6_expected,
 	             AF_INET6, "blahblah", 0, TRUE,
+	             NM_DHCP_FQDN_FLAG_NO_UPDATE,
 	             NULL,
 	             NULL,
 	             "eth0",
@@ -599,6 +615,7 @@ test_existing_alsoreq (void)
 {
 	test_config (existing_alsoreq_orig, existing_alsoreq_expected,
 	             AF_INET, NULL, 0, FALSE,
+	             NM_DHCP_FQDN_FLAG_NONE,
 	             NULL,
 	             NULL,
 	             "eth0",
@@ -638,6 +655,7 @@ test_existing_req (void)
 {
 	test_config (existing_req_orig, existing_req_expected,
 	             AF_INET, NULL, 0, FALSE,
+	             NM_DHCP_FQDN_FLAG_NONE,
 	             NULL,
 	             NULL,
 	             "eth0",
@@ -678,6 +696,7 @@ test_existing_multiline_alsoreq (void)
 {
 	test_config (existing_multiline_alsoreq_orig, existing_multiline_alsoreq_expected,
 	             AF_INET, NULL, 0, FALSE,
+	             NM_DHCP_FQDN_FLAG_NONE,
 	             NULL,
 	             NULL,
 	             "eth0",
@@ -917,6 +936,7 @@ test_interface1 (void)
 {
 	test_config (interface1_orig, interface1_expected,
 	             AF_INET, NULL, 0, FALSE,
+	             NM_DHCP_FQDN_FLAG_NONE,
 	             NULL,
 	             NULL,
 	             "eth0",
@@ -963,6 +983,7 @@ test_interface2 (void)
 {
 	test_config (interface2_orig, interface2_expected,
 	             AF_INET, NULL, 0, FALSE,
+	             NM_DHCP_FQDN_FLAG_NONE,
 	             NULL,
 	             NULL,
 	             "eth1",
@@ -1057,6 +1078,7 @@ test_structured (void)
 	new_client_id = g_bytes_new (bytes, sizeof (bytes) - 1);
 	test_config (orig, expected,
 	             AF_INET, NULL, 0, FALSE,
+	             NM_DHCP_FQDN_FLAG_NONE,
 	             NULL,
 	             new_client_id,
 	             "eth0",
@@ -1112,6 +1134,7 @@ test_config_req_intf (void)
 
 	test_config (orig, expected,
 	             AF_INET, NULL, 0, FALSE,
+	             NM_DHCP_FQDN_FLAG_NONE,
 	             NULL,
 	             NULL,
 	             "eth0",
