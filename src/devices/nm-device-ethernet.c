@@ -65,6 +65,7 @@ typedef struct Supplicant {
 
 	/* signal handler ids */
 	gulong iface_state_id;
+	gulong auth_status_id;
 
 	/* Timeouts and idles */
 	guint con_timeout_id;
@@ -415,6 +416,7 @@ supplicant_interface_release (NMDeviceEthernet *self)
 	nm_clear_g_source (&priv->supplicant_timeout_id);
 	nm_clear_g_source (&priv->supplicant.con_timeout_id);
 	nm_clear_g_signal_handler (priv->supplicant.iface, &priv->supplicant.iface_state_id);
+	nm_clear_g_signal_handler (priv->supplicant.iface, &priv->supplicant.auth_status_id);
 
 	if (priv->supplicant.iface) {
 		nm_supplicant_interface_disconnect (priv->supplicant.iface);
@@ -423,8 +425,20 @@ supplicant_interface_release (NMDeviceEthernet *self)
 }
 
 static void
+supplicant_auth_status_changed (NMSupplicantInterface *iface,
+                                const char *status,
+                                const char *detail,
+                                gpointer user_data)
+{
+	NMDeviceEthernet *self = NM_DEVICE_ETHERNET (user_data);
+
+	_LOGE (LOGD_CORE, "supplicant auth status changed: %s - %s", status, detail);
+}
+
+static void
 wired_auth_cond_fail (NMDeviceEthernet *self, NMDeviceStateReason reason)
 {
+	NMDeviceEthernetPrivate *priv = NM_DEVICE_ETHERNET_GET_PRIVATE (self);
 	NMConnection *applied;
 	NMSetting8021x *s_8021x;
 
@@ -435,6 +449,13 @@ wired_auth_cond_fail (NMDeviceEthernet *self, NMDeviceStateReason reason)
 		_LOGW (LOGD_DEVICE | LOGD_ETHER,
 		       "Activation: (ethernet) 802.1X authentication is optional, continuing after a failure");
 		return;
+	}
+
+	if (!priv->supplicant.auth_status_id) {
+		priv->supplicant.auth_status_id = g_signal_connect (priv->supplicant.iface,
+		                                                    NM_SUPPLICANT_INTERFACE_AUTH_STATUS_CHANGED,
+		                                                    G_CALLBACK (supplicant_auth_status_changed),
+		                                                    self);
 	}
 
 	nm_device_state_changed (NM_DEVICE (self),

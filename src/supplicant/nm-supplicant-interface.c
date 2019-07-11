@@ -93,6 +93,7 @@ enum {
 	GROUP_STARTED,           /* a new Group (interface) was created */
 	GROUP_FINISHED,          /* a Group (interface) has been finished */
 	GROUP_FORMATION_FAILURE, /* P2P Group formation failed */
+	AUTH_STATUS_CHANGED,     /* Authentication status changed */
 	LAST_SIGNAL
 };
 static guint signals[LAST_SIGNAL] = { 0 };
@@ -1270,6 +1271,17 @@ wpas_iface_network_request (GDBusProxy *proxy,
 }
 
 static void
+eap_changed (GDBusProxy *proxy,
+             const char *status,
+             const char *parameter,
+             gpointer user_data)
+{
+	NMSupplicantInterface *self = NM_SUPPLICANT_INTERFACE (user_data);
+
+	g_signal_emit (self, signals[AUTH_STATUS_CHANGED], 0, status, parameter);
+}
+
+static void
 props_changed_cb (GDBusProxy *proxy,
                   GVariant *changed_properties,
                   GStrv invalidated_properties,
@@ -1611,6 +1623,8 @@ on_iface_proxy_acquired (GDBusProxy *proxy, GAsyncResult *result, gpointer user_
 	                         G_CALLBACK (wpas_iface_bss_removed), self);
 	_nm_dbus_signal_connect (priv->iface_proxy, "NetworkRequest", G_VARIANT_TYPE ("(oss)"),
 	                         G_CALLBACK (wpas_iface_network_request), self);
+	_nm_dbus_signal_connect (priv->iface_proxy, "EAP", G_VARIANT_TYPE ("(ss)"),
+	                         G_CALLBACK (eap_changed), self);
 
 	/* Scan result aging parameters */
 	g_dbus_proxy_call (priv->iface_proxy,
@@ -2981,4 +2995,12 @@ nm_supplicant_interface_class_init (NMSupplicantInterfaceClass *klass)
 	                  0,
 	                  NULL, NULL, NULL,
 	                  G_TYPE_NONE, 1, G_TYPE_VARIANT);
+
+	signals[AUTH_STATUS_CHANGED] =
+	    g_signal_new (NM_SUPPLICANT_INTERFACE_AUTH_STATUS_CHANGED,
+	                  G_OBJECT_CLASS_TYPE (object_class),
+	                  G_SIGNAL_RUN_LAST,
+	                  0,
+	                  NULL, NULL, NULL,
+	                  G_TYPE_NONE, 2, G_TYPE_STRING, G_TYPE_STRING);
 }

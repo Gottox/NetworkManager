@@ -82,6 +82,7 @@ typedef enum {
 #define NM_SUPPLICANT_INTERFACE_GROUP_STARTED           "group-started"
 #define NM_SUPPLICANT_INTERFACE_GROUP_FINISHED          "group-finished"
 #define NM_SUPPLICANT_INTERFACE_GROUP_FORMATION_FAILURE "group-formation-failure"
+#define NM_SUPPLICANT_INTERFACE_AUTH_STATUS_CHANGED     "auth-status-changed"
 
 typedef struct _NMSupplicantInterfaceClass NMSupplicantInterfaceClass;
 
