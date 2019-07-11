@@ -423,6 +423,26 @@ supplicant_interface_release (NMDeviceEthernet *self)
 }
 
 static void
+wired_auth_cond_fail (NMDeviceEthernet *self, NMDeviceStateReason reason)
+{
+	NMConnection *applied;
+	NMSetting8021x *s_8021x;
+
+	applied = nm_device_get_applied_connection (NM_DEVICE (self));
+	s_8021x = nm_connection_get_setting_802_1x (applied);
+
+	if (nm_setting_802_1x_get_optional (s_8021x)) {
+		_LOGW (LOGD_DEVICE | LOGD_ETHER,
+		       "Activation: (ethernet) 802.1X authentication is optional, continuing after a failure");
+		return;
+	}
+
+	nm_device_state_changed (NM_DEVICE (self),
+	                         NM_DEVICE_STATE_FAILED,
+	                         reason);
+}
+
+static void
 wired_secrets_cb (NMActRequest *req,
                   NMActRequestGetSecretsCallId *call_id,
                   NMSettingsConnection *connection,
@@ -506,9 +526,7 @@ link_timeout_cb (gpointer user_data)
 	req = nm_device_get_act_request (dev);
 
 	if (nm_device_get_state (dev) == NM_DEVICE_STATE_ACTIVATED) {
-		nm_device_state_changed (dev,
-		                         NM_DEVICE_STATE_FAILED,
-		                         NM_DEVICE_STATE_REASON_SUPPLICANT_TIMEOUT);
+		wired_auth_cond_fail (self, NM_DEVICE_STATE_REASON_SUPPLICANT_TIMEOUT);
 		return FALSE;
 	}
 
@@ -537,7 +555,7 @@ link_timeout_cb (gpointer user_data)
 
 time_out:
 	_LOGW (LOGD_DEVICE | LOGD_ETHER, "link timed out.");
-	nm_device_state_changed (dev, NM_DEVICE_STATE_FAILED, NM_DEVICE_STATE_REASON_SUPPLICANT_DISCONNECT);
+	wired_auth_cond_fail (self, NM_DEVICE_STATE_REASON_SUPPLICANT_DISCONNECT);
 
 	return FALSE;
 }
@@ -652,11 +670,8 @@ supplicant_iface_state_cb (NMSupplicantInterface *iface,
 	case NM_SUPPLICANT_INTERFACE_STATE_DOWN:
 		supplicant_interface_release (self);
 
-		if ((devstate == NM_DEVICE_STATE_ACTIVATED) || nm_device_is_activating (device)) {
-			nm_device_state_changed (device,
-			                         NM_DEVICE_STATE_FAILED,
-			                         NM_DEVICE_STATE_REASON_SUPPLICANT_FAILED);
-		}
+		if ((devstate == NM_DEVICE_STATE_ACTIVATED) || nm_device_is_activating (device))
+			wired_auth_cond_fail (self, NM_DEVICE_STATE_REASON_SUPPLICANT_FAILED);
 		break;
 	default:
 		break;
@@ -697,8 +712,8 @@ supplicant_connection_timeout_cb (gpointer user_data)
 	NMDeviceEthernet *self = NM_DEVICE_ETHERNET (user_data);
 	NMDeviceEthernetPrivate *priv = NM_DEVICE_ETHERNET_GET_PRIVATE (self);
 	NMDevice *device = NM_DEVICE (self);
-	NMActRequest *req;
 	NMSettingsConnection *connection;
+	NMActRequest *req;
 	guint64 timestamp = 0;
 	gboolean new_secrets = TRUE;
 
@@ -712,10 +727,7 @@ supplicant_connection_timeout_cb (gpointer user_data)
 
 	supplicant_interface_release (self);
 	req = nm_device_get_act_request (device);
-	g_assert (req);
-
 	connection = nm_act_request_get_settings_connection (req);
-	g_assert (connection);
 
 	/* Ask for new secrets only if we've never activated this connection
 	 * before.  If we've connected before, don't bother the user with dialogs,
@@ -727,7 +739,7 @@ supplicant_connection_timeout_cb (gpointer user_data)
 	if (handle_auth_or_fail (self, req, new_secrets) == NM_ACT_STAGE_RETURN_POSTPONE)
 		_LOGW (LOGD_DEVICE | LOGD_ETHER, "Activation: (ethernet) asking for new secrets");
 	else
-		nm_device_state_changed (device, NM_DEVICE_STATE_FAILED, NM_DEVICE_STATE_REASON_NO_SECRETS);
+		wired_auth_cond_fail (self, NM_DEVICE_STATE_REASON_NO_SECRETS);
 
 	return FALSE;
 }
