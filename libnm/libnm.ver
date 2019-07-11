@@ -1619,4 +1619,5 @@ global:
 	nm_setting_ovs_dpdk_get_devargs;
 	nm_setting_ovs_dpdk_get_type;
 	nm_setting_ovs_dpdk_new;
+	nm_setting_802_1x_get_optional;
 } libnm_1_18_0;
