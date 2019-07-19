@@ -368,10 +368,13 @@ lease_parse_address (NDhcp4ClientLease *lease,
 {
 	char addr_str[NM_UTILS_INET_ADDRSTRLEN];
 	const gint64 ts = nm_utils_get_monotonic_timestamp_ns ();
+	const gint64 ts_clock_boottime = nm_utils_monotonic_timestamp_as_boottime (ts, 1);
+	gint64 ts_time = time (NULL);
 	struct in_addr a_address;
 	struct in_addr a_netmask;
 	guint32 a_plen;
-	guint64 a_lifetime;
+	guint64 nettools_lifetime;
+	gint64 a_lifetime;
 
 	n_dhcp4_client_lease_get_yiaddr (lease, &a_address);
 	if (a_address.s_addr == INADDR_ANY) {
@@ -380,7 +383,22 @@ lease_parse_address (NDhcp4ClientLease *lease,
 	}
 
 	/* n_dhcp4_client_lease_get_lifetime() never fails */
-	n_dhcp4_client_lease_get_lifetime (lease, &a_lifetime);
+	n_dhcp4_client_lease_get_lifetime (lease, &nettools_lifetime);
+	if (nettools_lifetime == G_MAXUINT64)
+		a_lifetime = NM_PLATFORM_LIFETIME_PERMANENT;
+	else {
+		a_lifetime = ((gint64) nettools_lifetime - ts_clock_boottime) / NM_UTILS_NS_PER_SECOND;
+		/* A lease time of 0 is allowed on some dhcp servers, so, let's accept it.
+		 * TODO: maybe we should consider accepting low negative numbers (e.g., -1 or -2),
+		 * as we calculate the lease time doing some math with timestamps */
+		if (a_lifetime < 0) {
+			nm_utils_error_set (error, NM_UTILS_ERROR_UNKNOWN,
+			                    "got invalid lease time '%lld'", (long long) a_lifetime);
+			return FALSE;
+		}
+		if (a_lifetime > NM_PLATFORM_LIFETIME_PERMANENT)
+			a_lifetime = NM_PLATFORM_LIFETIME_PERMANENT - 1;
+	}
 
 	if (!lease_get_in_addr (lease, NM_DHCP_OPTION_DHCP4_SUBNET_MASK, &a_netmask)) {
 		nm_utils_error_set_literal (error, NM_UTILS_ERROR_UNKNOWN, "could not get netmask from lease");
@@ -400,12 +418,20 @@ lease_parse_address (NDhcp4ClientLease *lease,
 	                           NM_DHCP_OPTION_DHCP4_SUBNET_MASK,
 	                           nm_utils_inet4_ntop (a_netmask.s_addr, addr_str));
 
-	LOG_LEASE (LOGD_DHCP4, "expires in %u seconds",
-	           (guint) ((a_lifetime - ts)/1000000000));
+	LOG_LEASE (LOGD_DHCP4, "%s '%u' seconds (at %lld)",
+	           nm_dhcp_option_request_string (_nm_dhcp_option_dhcp4_options,
+	                                          NM_DHCP_OPTION_DHCP4_IP_ADDRESS_LEASE_TIME),
+	           (guint) a_lifetime,
+	           (long long) (ts_time + a_lifetime));
 	nm_dhcp_option_add_option_u64 (options,
 	                               _nm_dhcp_option_dhcp4_options,
 	                               NM_DHCP_OPTION_DHCP4_IP_ADDRESS_LEASE_TIME,
-	                               (guint64) (a_lifetime / 1000000000));
+	                               (guint64) a_lifetime);
+
+	nm_dhcp_option_add_option_u64 (options,
+	                               _nm_dhcp_option_dhcp4_options,
+	                               NM_DHCP_OPTION_DHCP4_NM_EXPIRY,
+	                               (guint64) ts_time + (guint64) a_lifetime);
 
 	nm_ip4_config_add_address (ip4_config,
 	                           &((const NMPlatformIP4Address) {
@@ -413,9 +439,9 @@ lease_parse_address (NDhcp4ClientLease *lease,
 	                                   .peer_address = a_address.s_addr,
 	                                   .plen         = a_plen,
 	                                   .addr_source  = NM_IP_CONFIG_SOURCE_DHCP,
-	                                   .timestamp    = ts / 1000000000,
-	                                   .lifetime     = (a_lifetime - ts) / 1000000000,
-	                                   .preferred    = (a_lifetime - ts) / 1000000000,
+	                                   .timestamp    = ts / NM_UTILS_NS_PER_SECOND,
+	                                   .lifetime     = a_lifetime,
+	                                   .preferred    = a_lifetime,
 	                           }));
 
 	return TRUE;
