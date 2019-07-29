@@ -195,6 +195,7 @@ extern const NMDhcpOption _nm_dhcp_option_dhcp4_options[];
 extern const NMDhcpOption _nm_dhcp_option_dhcp6_options[];
 
 const char *nm_dhcp_option_request_string (const NMDhcpOption *requests, guint option);
+void nm_dhcp_option_log_lease_options (const char *iface, GHashTable *options);
 void nm_dhcp_option_take_option (GHashTable *options, const NMDhcpOption *requests, guint option, char *value);
 void nm_dhcp_option_add_option (GHashTable *options, const NMDhcpOption *requests, guint option, const char *value);
 void nm_dhcp_option_add_option_u64 (GHashTable *options, const NMDhcpOption *requests, guint option, guint64 value);

@@ -19,7 +19,25 @@
 
 #include "nm-default.h"
 
+#include "nm-dhcp-client-logging.h"
 #include "nm-dhcp-options.h"
+
+
+
+#define LOG_LEASE(domain, ...) \
+G_STMT_START { \
+	_LOG2D ((domain), (iface), "  "__VA_ARGS__); \
+} G_STMT_END
+
+void nm_dhcp_option_log_lease_options (const char *iface, GHashTable *options)
+{
+	GHashTableIter iter;
+	gpointer key, value;
+
+	g_hash_table_iter_init (&iter, options);
+	while (g_hash_table_iter_next (&iter, &key, &value))
+		LOG_LEASE (LOGD_DHCP4, "%s '%s'", (char *) key, (char *) value);
+}
 
 
 #define REQPREFIX "requested_"
