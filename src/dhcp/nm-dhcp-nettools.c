@@ -356,7 +356,6 @@ lease_get_u16 (NDhcp4ClientLease *lease,
 
 static gboolean
 lease_parse_address (NDhcp4ClientLease *lease,
-                     const char *iface,
                      NMIP4Config *ip4_config,
                      GHashTable *options,
                      GError **error)
@@ -438,7 +437,6 @@ lease_parse_address (NDhcp4ClientLease *lease,
 
 static void
 lease_parse_domain_name_servers (NDhcp4ClientLease *lease,
-                                 const char *iface,
                                  NMIP4Config *ip4_config,
                                  GHashTable *options)
 {
@@ -477,7 +475,6 @@ lease_parse_domain_name_servers (NDhcp4ClientLease *lease,
 
 static void
 lease_parse_routes (NDhcp4ClientLease *lease,
-                    const char *iface,
                     NMIP4Config *ip4_config,
                     GHashTable *options,
                     guint32 route_table,
@@ -636,7 +633,6 @@ lease_parse_routes (NDhcp4ClientLease *lease,
 
 static void
 lease_parse_mtu (NDhcp4ClientLease *lease,
-                 const char *iface,
                  NMIP4Config *ip4_config,
                  GHashTable *options)
 {
@@ -657,7 +653,6 @@ lease_parse_mtu (NDhcp4ClientLease *lease,
 
 static void
 lease_parse_metered (NDhcp4ClientLease *lease,
-                     const char *iface,
                      NMIP4Config *ip4_config,
                      GHashTable *options)
 {
@@ -679,7 +674,6 @@ lease_parse_metered (NDhcp4ClientLease *lease,
 
 static void
 lease_parse_ntps (NDhcp4ClientLease *lease,
-                  const char *iface,
                   GHashTable *options)
 {
 	nm_auto_free_gstring GString *str = NULL;
@@ -708,7 +702,6 @@ lease_parse_ntps (NDhcp4ClientLease *lease,
 
 static void
 lease_parse_hostname (NDhcp4ClientLease *lease,
-                      const char *iface,
                       GHashTable *options)
 {
 	nm_auto_free_gstring GString *str = NULL;
@@ -733,7 +726,6 @@ lease_parse_hostname (NDhcp4ClientLease *lease,
 
 static void
 lease_parse_domainname (NDhcp4ClientLease *lease,
-                        const char *iface,
                         NMIP4Config *ip4_config,
                         GHashTable *options)
 {
@@ -768,7 +760,6 @@ lease_parse_domainname (NDhcp4ClientLease *lease,
 
 static void
 lease_parse_search_domains (NDhcp4ClientLease *lease,
-                            const char *iface,
                             NMIP4Config *ip4_config,
                             GHashTable *options)
 {
@@ -804,7 +795,6 @@ lease_parse_search_domains (NDhcp4ClientLease *lease,
 
 static void
 lease_parse_root_path (NDhcp4ClientLease *lease,
-                       const char *iface,
                        GHashTable *options)
 {
 	nm_auto_free_gstring GString *str = NULL;
@@ -825,7 +815,6 @@ lease_parse_root_path (NDhcp4ClientLease *lease,
 
 static void
 lease_parse_wpad (NDhcp4ClientLease *lease,
-                  const char *iface,
                   GHashTable *options)
 {
 	nm_auto_free_gstring GString *str = NULL;
@@ -846,7 +835,6 @@ lease_parse_wpad (NDhcp4ClientLease *lease,
 
 static void
 lease_parse_private_options (NDhcp4ClientLease *lease,
-                             const char *iface,
                              GHashTable *options)
 {
 	int i;
@@ -896,21 +884,21 @@ lease_to_ip4_config (NMDedupMultiIndex *multi_idx,
 	ip4_config = nm_ip4_config_new (multi_idx, ifindex);
 	options = out_options ? nm_dhcp_option_create_options_dict () : NULL;
 
-	if (!lease_parse_address (lease, iface, ip4_config, options, error))
+	if (!lease_parse_address (lease, ip4_config, options, error))
 		return NULL;
 
-	lease_parse_routes (lease, iface, ip4_config, options, route_table, route_metric);
-	lease_parse_domain_name_servers (lease, iface, ip4_config, options);
-	lease_parse_domainname (lease, iface, ip4_config, options);
-	lease_parse_search_domains (lease, iface, ip4_config, options);
-	lease_parse_mtu (lease, iface, ip4_config, options);
-	lease_parse_metered (lease, iface, ip4_config, options);
+	lease_parse_routes (lease, ip4_config, options, route_table, route_metric);
+	lease_parse_domain_name_servers (lease, ip4_config, options);
+	lease_parse_domainname (lease, ip4_config, options);
+	lease_parse_search_domains (lease, ip4_config, options);
+	lease_parse_mtu (lease, ip4_config, options);
+	lease_parse_metered (lease, ip4_config, options);
 
-	lease_parse_hostname (lease, iface, options);
-	lease_parse_ntps (lease, iface, options);
-	lease_parse_root_path (lease, iface, options);
-	lease_parse_wpad (lease, iface, options);
-	lease_parse_private_options (lease, iface, options);
+	lease_parse_hostname (lease, options);
+	lease_parse_ntps (lease, options);
+	lease_parse_root_path (lease, options);
+	lease_parse_wpad (lease, options);
+	lease_parse_private_options (lease, options);
 
 	nm_dhcp_option_log_lease_options (iface, options);
 	NM_SET_OUT (out_options, g_steal_pointer (&options));
