@@ -2605,10 +2605,10 @@ write_ip4_setting (NMConnection *connection,
 	svSetValueStr (ifcfg, "DHCP_FQDN", value);
 
 	flags = nm_setting_ip_config_get_dhcp_fqdn_flags (s_ip4);
-	if (flags == NM_DHCP_FQDN_FLAG_DEFAULT)
-		svUnsetValue (ifcfg, "DHCP_FQDN_FLAGS");
-	else
-		svSetValueInt64 (ifcfg, "DHCP_FQDN_FLAGS", flags);
+	svSetValueInt64_cond (ifcfg,
+	                      "DHCP_FQDN_FLAGS",
+	                      flags != NM_DHCP_FQDN_FLAG_DEFAULT,
+	                      flags);
 
 	/* Missing DHCP_SEND_HOSTNAME means TRUE, and we prefer not write it explicitly
 	 * in that case, because it is NM-specific variable
@@ -2768,10 +2768,10 @@ write_ip6_setting_dhcp_hostname (NMSettingIPConfig *s_ip6, shvarFile *ifcfg)
 		svSetValueStr (ifcfg, "DHCPV6_SEND_HOSTNAME", "no");
 
 	flags = nm_setting_ip_config_get_dhcp_fqdn_flags (s_ip6);
-	if (flags == NM_DHCP_FQDN_FLAG_DEFAULT)
-		svUnsetValue (ifcfg, "DHCPV6_FQDN_FLAGS");
-	else
-		svSetValueInt64 (ifcfg, "DHCPV6_FQDN_FLAGS", flags);
+	svSetValueInt64_cond (ifcfg,
+	                      "DHCPV6_FQDN_FLAGS",
+	                      flags != NM_DHCP_FQDN_FLAG_DEFAULT,
+	                      flags);
 }
 
 static gboolean
