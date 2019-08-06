@@ -7875,6 +7875,9 @@ get_dhcp_fqdn_flags (NMDevice *self, int addr_family)
 	s_ip = nm_connection_get_setting_ip_config (connection, addr_family);
 	g_return_val_if_fail (s_ip, NM_DHCP_FQDN_FLAG_NONE);
 
+	if (!nm_setting_ip_config_get_dhcp_send_hostname (s_ip))
+		return NM_DHCP_FQDN_FLAG_DEFAULT;
+
 	flags = nm_setting_ip_config_get_dhcp_fqdn_flags (s_ip);
 	if (flags != NM_DHCP_FQDN_FLAG_DEFAULT)
 		return flags;
