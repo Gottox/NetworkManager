@@ -945,9 +945,6 @@ get_property (GObject *object, guint prop_id,
 	case PROP_HOSTNAME:
 		g_value_set_string (value, priv->hostname);
 		break;
-	case PROP_FQDN_FLAGS:
-		g_value_set_uint (value, priv->fqdn_flags);
-		break;
 	case PROP_ROUTE_METRIC:
 		g_value_set_uint (value, priv->route_metric);
 		break;
@@ -1146,7 +1143,7 @@ nm_dhcp_client_class_init (NMDhcpClientClass *client_class)
 	obj_properties[PROP_FQDN_FLAGS] =
 	    g_param_spec_uint (NM_DHCP_CLIENT_FQDN_FLAGS, "", "",
 	                       0, G_MAXUINT32, NM_DHCP_FQDN_FLAG_DEFAULT,
-	                       G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY |
+	                       G_PARAM_WRITABLE | G_PARAM_CONSTRUCT_ONLY |
 	                       G_PARAM_STATIC_STRINGS);
 
 	obj_properties[PROP_ROUTE_TABLE] =
