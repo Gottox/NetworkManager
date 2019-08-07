@@ -362,8 +362,12 @@ static void n_dhcp4_client_probe_config_initialize_random_seed(NDhcp4ClientProbe
         seed16v[1] = (u64 >> 16) ^ (u64 >>  0);
         seed16v[2] = (u64 >> 32) ^ (u64 >> 16);
 
+#ifdef __GLIBC__
         r = seed48_r(seed16v, &config->entropy);
         c_assert(!r);
+#else
+        memcpy(config->entropy, seed16v, sizeof seed16v);
+#endif
 }
 
 /**
@@ -377,10 +381,14 @@ static void n_dhcp4_client_probe_config_initialize_random_seed(NDhcp4ClientProbe
  */
 uint32_t n_dhcp4_client_probe_config_get_random(NDhcp4ClientProbeConfig *config) {
         long int result;
+#ifdef __GLIBC__
         int r;
 
         r = mrand48_r(&config->entropy, &result);
         c_assert(!r);
+#else
+        result = jrand48(config->entropy);
+#endif
 
         return result;
 };
